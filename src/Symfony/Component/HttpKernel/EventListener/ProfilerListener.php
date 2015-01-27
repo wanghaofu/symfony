@@ -33,7 +33,6 @@ class ProfilerListener implements EventSubscriberInterface
     protected $onlyException;
     protected $onlyMasterRequests;
     protected $exception;
-    protected $requests = array();
     protected $profiles;
     protected $requestStack;
     protected $parents;
@@ -45,17 +44,10 @@ class ProfilerListener implements EventSubscriberInterface
      * @param RequestMatcherInterface|null $matcher            A RequestMatcher instance
      * @param bool                         $onlyException      true if the profiler only collects data when an exception occurs, false otherwise
      * @param bool                         $onlyMasterRequests true if the profiler only collects data when the request is a master request, false otherwise
-     * @param RequestStack|null            $requestStack       A RequestStack instance
+     * @param RequestStack                 $requestStack       A RequestStack instance
      */
-    public function __construct(Profiler $profiler, RequestMatcherInterface $matcher = null, $onlyException = false, $onlyMasterRequests = false, RequestStack $requestStack = null)
+    public function __construct(Profiler $profiler, RequestMatcherInterface $matcher = null, $onlyException = false, $onlyMasterRequests = false, RequestStack $requestStack)
     {
-        if (null === $requestStack) {
-            // Prevent the deprecation notice to be triggered all the time.
-            // The onKernelRequest() method fires some logic only when the
-            // RequestStack instance is not provided as a dependency.
-            trigger_error('Since version 2.4, the '.__METHOD__.' method must accept a RequestStack instance to get the request instead of using the '.__CLASS__.'::onKernelRequest method that will be removed in 3.0.', E_USER_DEPRECATED);
-        }
-
         $this->profiler = $profiler;
         $this->matcher = $matcher;
         $this->onlyException = (bool) $onlyException;
@@ -77,16 +69,6 @@ class ProfilerListener implements EventSubscriberInterface
         }
 
         $this->exception = $event->getException();
-    }
-
-    /**
-     * @deprecated since version 2.4, to be removed in 3.0.
-     */
-    public function onKernelRequest(GetResponseEvent $event)
-    {
-        if (null === $this->requestStack) {
-            $this->requests[] = $event->getRequest();
-        }
     }
 
     /**
@@ -118,23 +100,14 @@ class ProfilerListener implements EventSubscriberInterface
         }
 
         $this->profiles[$request] = $profile;
-
-        if (null !== $this->requestStack) {
-            $this->parents[$request] = $this->requestStack->getParentRequest();
-        } elseif (!$master) {
-            // to be removed when requestStack is required
-            array_pop($this->requests);
-
-            $this->parents[$request] = end($this->requests);
-        }
+        $this->parents[$request] = $this->requestStack->getParentRequest();
     }
 
     public function onKernelTerminate(PostResponseEvent $event)
     {
         // attach children to parents
         foreach ($this->profiles as $request) {
-            // isset call should be removed when requestStack is required
-            if (isset($this->parents[$request]) && null !== $parentRequest = $this->parents[$request]) {
+            if (null !== $parentRequest = $this->parents[$request]) {
                 if (isset($this->profiles[$parentRequest])) {
                     $this->profiles[$parentRequest]->addChild($this->profiles[$request]);
                 }
@@ -148,7 +121,6 @@ class ProfilerListener implements EventSubscriberInterface
 
         $this->profiles = new \SplObjectStorage();
         $this->parents = new \SplObjectStorage();
-        $this->requests = array();
     }
 
     public static function getSubscribedEvents()
@@ -156,7 +128,6 @@ class ProfilerListener implements EventSubscriberInterface
         return array(
             // kernel.request must be registered as early as possible to not break
             // when an exception is thrown in any other kernel.request listener
-            KernelEvents::REQUEST => array('onKernelRequest', 1024),
             KernelEvents::RESPONSE => array('onKernelResponse', -100),
             KernelEvents::EXCEPTION => 'onKernelException',
             KernelEvents::TERMINATE => array('onKernelTerminate', -1024),

@@ -25,7 +25,7 @@ class LazyLoadingFragmentHandler extends FragmentHandler
     private $container;
     private $rendererIds = array();
 
-    public function __construct(ContainerInterface $container, $debug = false, RequestStack $requestStack = null)
+    public function __construct(ContainerInterface $container, $debug = false, RequestStack $requestStack)
     {
         $this->container = $container;
 

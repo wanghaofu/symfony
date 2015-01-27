@@ -23,11 +23,6 @@ use Symfony\Component\HttpKernel\Controller\ControllerReference;
  * This class handles the rendering of resource fragments that are included into
  * a main resource. The handling of the rendering is managed by specialized renderers.
  *
- * This listener works in 2 modes:
- *
- *  * 2.3 compatibility mode where you must call setRequest whenever the Request changes.
- *  * 2.4+ mode where you must pass a RequestStack instance in the constructor.
- *
  * @author Fabien Potencier <fabien@symfony.com>
  *
  * @see FragmentRendererInterface
@@ -36,7 +31,6 @@ class FragmentHandler
 {
     private $debug;
     private $renderers = array();
-    private $request;
     private $requestStack;
 
     /**
@@ -46,9 +40,9 @@ class FragmentHandler
      *
      * @param FragmentRendererInterface[] $renderers    An array of FragmentRendererInterface instances
      * @param bool                        $debug        Whether the debug mode is enabled or not
-     * @param RequestStack|null           $requestStack The Request stack that controls the lifecycle of requests
+     * @param RequestStack                $requestStack The Request stack that controls the lifecycle of requests
      */
-    public function __construct(array $renderers = array(), $debug = false, RequestStack $requestStack = null)
+    public function __construct(array $renderers = array(), $debug = false, RequestStack $requestStack)
     {
         $this->requestStack = $requestStack;
         foreach ($renderers as $renderer) {
@@ -65,24 +59,6 @@ class FragmentHandler
     public function addRenderer(FragmentRendererInterface $renderer)
     {
         $this->renderers[$renderer->getName()] = $renderer;
-    }
-
-    /**
-     * Sets the current Request.
-     *
-     * This method was used to synchronize the Request, but as the HttpKernel
-     * is doing that automatically now, you should never call it directly.
-     * It is kept public for BC with the 2.3 version.
-     *
-     * @param Request|null $request A Request instance
-     *
-     * @deprecated since version 2.4, to be removed in 3.0.
-     */
-    public function setRequest(Request $request = null)
-    {
-        trigger_error('The '.__METHOD__.' method is deprecated since version 2.4 and will be removed in 3.0.', E_USER_DEPRECATED);
-
-        $this->request = $request;
     }
 
     /**
@@ -111,7 +87,7 @@ class FragmentHandler
             throw new \InvalidArgumentException(sprintf('The "%s" renderer does not exist.', $renderer));
         }
 
-        if (!$request = $this->getRequest()) {
+        if (!$request = $this->requestStack->getCurrentRequest()) {
             throw new \LogicException('Rendering a fragment can only be done when handling a Request.');
         }
 
@@ -133,7 +109,7 @@ class FragmentHandler
     protected function deliver(Response $response)
     {
         if (!$response->isSuccessful()) {
-            throw new \RuntimeException(sprintf('Error when rendering "%s" (Status code is %s).', $this->getRequest()->getUri(), $response->getStatusCode()));
+            throw new \RuntimeException(sprintf('Error when rendering "%s" (Status code is %s).', $this->requestStack->getCurrentRequest()->getUri(), $response->getStatusCode()));
         }
 
         if (!$response instanceof StreamedResponse) {
@@ -141,10 +117,5 @@ class FragmentHandler
         }
 
         $response->sendContent();
-    }
-
-    private function getRequest()
-    {
-        return $this->requestStack ? $this->requestStack->getCurrentRequest() : $this->request;
     }
 }
