@@ -23,16 +23,6 @@ class LoaderTest extends \PHPUnit_Framework_TestCase
         $loader->setLogger($logger);
         $this->assertSame($logger, $loader->getLogger(), '->setLogger() sets the logger instance');
     }
-
-    public function testLegacyGetSetDebugger()
-    {
-        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
-
-        $loader = new ProjectTemplateLoader4();
-        $debugger = $this->getMock('Symfony\Component\Templating\DebuggerInterface');
-        $loader->setDebugger($debugger);
-        $this->assertSame($debugger, $loader->getDebugger(), '->setDebugger() sets the debugger instance');
-    }
 }
 
 class ProjectTemplateLoader4 extends Loader
@@ -44,11 +34,6 @@ class ProjectTemplateLoader4 extends Loader
     public function getLogger()
     {
         return $this->logger;
-    }
-
-    public function getDebugger()
-    {
-        return $this->debugger;
     }
 
     public function isFresh(TemplateReferenceInterface $template, $time)
