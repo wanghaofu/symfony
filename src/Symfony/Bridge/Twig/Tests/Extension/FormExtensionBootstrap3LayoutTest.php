@@ -35,14 +35,6 @@ class FormExtensionBootstrap3LayoutTest extends AbstractBootstrap3LayoutTest
     {
         parent::setUp();
 
-        $rendererEngine = new TwigRendererEngine(array(
-            'bootstrap_3_layout.html.twig',
-            'custom_widgets.html.twig',
-        ));
-        $renderer = new TwigRenderer($rendererEngine, $this->getMock('Symfony\Component\Security\Csrf\CsrfTokenManagerInterface'));
-
-        $this->extension = new FormExtension($renderer);
-
         $loader = new StubFilesystemLoader(array(
             __DIR__.'/../../Resources/views/Form',
             __DIR__.'/Fixtures/templates/form',
@@ -50,6 +42,15 @@ class FormExtensionBootstrap3LayoutTest extends AbstractBootstrap3LayoutTest
 
         $environment = new \Twig_Environment($loader, array('strict_variables' => true));
         $environment->addExtension(new TranslationExtension(new StubTranslator()));
+
+        $rendererEngine = new TwigRendererEngine(array(
+            'bootstrap_3_layout.html.twig',
+            'custom_widgets.html.twig',
+        ), $environment);
+        $renderer = new TwigRenderer($rendererEngine, $this->getMock('Symfony\Component\Security\Csrf\CsrfTokenManagerInterface'));
+
+        $this->extension = new FormExtension($renderer);
+
         $environment->addExtension($this->extension);
 
         $this->extension->initRuntime($environment);

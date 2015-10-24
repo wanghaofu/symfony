@@ -18,23 +18,17 @@ use Symfony\Component\Form\FormRenderer;
  */
 class TwigRenderer extends FormRenderer implements TwigRendererInterface
 {
-    /**
-     * @var TwigRendererEngineInterface
-     */
-    private $engine;
-
     public function __construct(TwigRendererEngineInterface $engine, $csrfTokenManager = null)
     {
         parent::__construct($engine, $csrfTokenManager);
-
-        $this->engine = $engine;
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @deprecated Deprecated in 2.8, to be removed in 3.0.
      */
     public function setEnvironment(\Twig_Environment $environment)
     {
-        $this->engine->setEnvironment($environment);
     }
 }
